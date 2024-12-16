@@ -34,11 +34,13 @@ private:
 	void init_window(int width, int height);
 	void command_movement(Entity& entity, sf::Keyboard::Key keycode);
 	void random_movement(Enemy& enemy);
+	void update_events();
+	void game_over();
+	void death_check();
 	void draw_playfield();
 	void draw_walls();
 	void draw_bomberman();
 	void draw_enemies();
-	void update_events();
 
 public:
 	Game();

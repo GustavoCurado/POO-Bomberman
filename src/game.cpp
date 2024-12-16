@@ -1,5 +1,8 @@
 #include <cstdlib>
 #include <ctime>
+#include <cmath>
+#include <chrono>
+#include <thread>
 #include <stdexcept>
 #include "game.hpp"
 
@@ -212,12 +215,46 @@ void Game::update_events()
 }
 
 
+void Game::game_over()
+{
+	this->_man.is_dead() = true;
+
+	this->render();
+
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+
+	this->_window->close();
+}
+
+
+/* Checks if the player touched any of the enemies and, if they did, end the game */
+void Game::death_check()
+{
+	bool they_touched;
+
+	//*they_touched: true if the bomberman's and an enemy's sprite overlaped
+
+	for (auto enemy : this->_enemies)
+	{
+		if (this->_man.x() == enemy.x())
+			they_touched = (abs(this->_man.y() - enemy.y()) < BLOCK_SIZE);		
+		else if (this->_man.y() == enemy.y())
+			they_touched = (abs(this->_man.x() - enemy.x()) < BLOCK_SIZE);		
+		else
+			they_touched = false;
+
+		if (they_touched)
+			this->game_over();
+	}
+}
+
+
 /* Updates the status and position of entities and objects in the game */
 void Game::update()
 {
 	this->update_events();
 
-	//Place first death check here
+	this->death_check();
 	
 	//Randomly moves all enemies in the game
 	for (Enemy& enemy : this->_enemies)	
@@ -225,7 +262,11 @@ void Game::update()
 		this->random_movement(enemy);
 	}
 
-	//Place second death check here
+	//There are two death checks because, if we only placed a death check after
+	//both the Bomberman and his enemies moved, it's possible that, at their his
+	//the Bomberman touches an enemy, but the enemy mover away from him on his turn,
+	//making it so that the Bomberman doesn't die, even though he should have.
+	this->death_check();
 }
 
 
@@ -265,7 +306,7 @@ void Game::draw_bomberman()
 	sf::Sprite man_sprite;
 	man_sprite.setTexture(this->_spritesheet);
 	
-	if (!this->_man.is_dying())
+	if (!this->_man.is_dead())
 	{
 		switch (this->_man.last_move())
 		{
@@ -304,30 +345,23 @@ void Game::draw_enemies()
 		sf::Sprite enemy_sprite;
 		enemy_sprite.setTexture(this->_spritesheet);
 		
-		if (!enemy.is_dying())
+		switch (enemy.last_move())
 		{
-			switch (enemy.last_move())
-			{
-			case sf::Keyboard::Up:
-				enemy_sprite.setTextureRect(sf::IntRect(0, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
-				break;
-			case sf::Keyboard::Down:
-				enemy_sprite.setTextureRect(sf::IntRect(3*BLOCK_SIZE+1, 20*BLOCK_SIZE+1, BLOCK_SIZE, BLOCK_SIZE-1));
-				break;
-			case sf::Keyboard::Left:
-				enemy_sprite.setTextureRect(sf::IntRect(5*BLOCK_SIZE, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
-				break;
-			case sf::Keyboard::Right:
-				enemy_sprite.setTextureRect(sf::IntRect(2*BLOCK_SIZE, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
-				break;
-			default:
-				throw std::runtime_error("Error: Invalid movement for Enemy.");
-				break;
-			}
-		}
-		else
-		{
-			enemy_sprite.setTextureRect(sf::IntRect(6*BLOCK_SIZE, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+		case sf::Keyboard::Up:
+			enemy_sprite.setTextureRect(sf::IntRect(0, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+			break;
+		case sf::Keyboard::Down:
+			enemy_sprite.setTextureRect(sf::IntRect(3*BLOCK_SIZE+1, 20*BLOCK_SIZE+1, BLOCK_SIZE, BLOCK_SIZE-1));
+			break;
+		case sf::Keyboard::Left:
+			enemy_sprite.setTextureRect(sf::IntRect(5*BLOCK_SIZE, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+			break;
+		case sf::Keyboard::Right:
+			enemy_sprite.setTextureRect(sf::IntRect(2*BLOCK_SIZE, 20*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+			break;
+		default:
+			throw std::runtime_error("Error: Invalid movement for Enemy.");
+			break;
 		}
 
 		enemy_sprite.setPosition(enemy.x(), enemy.y());

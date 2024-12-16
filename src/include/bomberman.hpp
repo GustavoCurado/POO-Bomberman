@@ -6,6 +6,10 @@
 
 class Bomberman : public Entity
 {
+private:
+	bool _is_dead;
 public:
 	Bomberman();
+
+	bool& is_dead();
 };

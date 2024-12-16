@@ -12,11 +12,6 @@ int Entity::y()
 }
 
 
-bool Entity::is_dying()
-{
-	return this->_is_dying;
-}
-
 /* Returns _speed, that is, the amount of pixels the entity moves per action */
 float Entity::speed()
 {

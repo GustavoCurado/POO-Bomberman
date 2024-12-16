@@ -11,7 +11,6 @@ class Entity
 {
 protected:
 	std::pair<float,float> _coords;
-	bool _is_dying;
 	float _speed;
 	int _steps_counter; 
 	sf::Keyboard::Key _last_move;

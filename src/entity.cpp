@@ -1,12 +1,12 @@
 #include "entity.hpp"
 
-int Entity::x()
+float Entity::x()
 {
 	return this->_coords.first;
 }
 
 
-int Entity::y()
+float Entity::y()
 {
 	return this->_coords.second;
 }
@@ -34,7 +34,7 @@ sf::Keyboard::Key Entity::last_move()
 }
 
 
-void Entity::set_coordinates(std::pair<int,int> coords)
+void Entity::set_coordinates(std::pair<float,float> coords)
 {
 	this->_coords = coords;
 }

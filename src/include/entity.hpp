@@ -17,14 +17,14 @@ protected:
 
 public:
 	//Acessors
-	int x();
-	int y();
+	float x();
+	float y();
 	bool is_dying();
 	float speed();
 	int& steps_counter();
 	sf::Keyboard::Key last_move();
 
-	void set_coordinates(std::pair<int,int> coords);
+	void set_coordinates(std::pair<float,float> coords);
 	void move_up();
 	void move_down();
 	void move_left();

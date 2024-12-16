@@ -512,10 +512,6 @@ void Game::update_events()
 			else
 				this->command_movement(this->_man, this->_event.key.code); //If it's any other key, try to move the bomberman
 
-			//Debug
-			if (this->_event.key.code == sf::Keyboard::P)
-				this->victory();
-
 			break;
 		default:
 			break;

@@ -109,7 +109,7 @@ void Game::command_movement(Entity& entity, sf::Keyboard::Key keycode)
 		if (is_centered && (is_empty || is_far_enough))
 			entity.move_up();
 
-		entity.steps_counter()++;
+		entity.steps_counter()++; //Counts how many steps an enemy moved in single direction
 
 		break;
 	case sf::Keyboard::Down:
@@ -194,14 +194,17 @@ void Game::random_movement(Enemy& enemy)
 }
 
 
+/* Places a bomb on front of the Bomberman */
 void Game::drop_bomb()
 {
-	int i = this->_man.y() / BLOCK_SIZE;
+	int i = this->_man.y() / BLOCK_SIZE; //Position on _map analogous to the Bomberman's position
 	int j = this->_man.x() / BLOCK_SIZE;
 
 	int bomb_i;
 	int bomb_j;
 
+	//Determines where in the map the bomb will be dropped based
+	//on the direction in which the bomberman is looking at
 	switch (this->_man.last_move())
 	{
 	case sf::Keyboard::Up:
@@ -209,21 +212,40 @@ void Game::drop_bomb()
 		bomb_j = j;
 		break;
 	case sf::Keyboard::Down:
-		bomb_i = i+2;
-		bomb_j = j;
+		if ((int)this->_man.y() % BLOCK_SIZE == 0) //Checks if the Bomberman is in the center of the _map tile
+		{
+			bomb_i = i+1;
+			bomb_j = j;
+		}
+		else
+		{
+			bomb_i = i+2;
+			bomb_j = j;
+		}
+
 		break;
 	case sf::Keyboard::Left:
 		bomb_i = i;
 		bomb_j = j-1;
 		break;
 	case sf::Keyboard::Right:
-		bomb_i = i;
-		bomb_j = j+2;
+		if ((int)this->_man.x() % BLOCK_SIZE == 0)
+		{
+			bomb_i = i;
+			bomb_j = j+1;
+		}
+		else
+		{
+			bomb_i = i;
+			bomb_j = j+2;
+		}
 		break;
 	}
 
 	char* bomberman_front = &this->_map[bomb_i][bomb_j]; //Not a NULL-terminated string, only a pointer to a single char
 
+	//If there are no walls that prevent the bomb from being placed there,
+	//the bomb is placed there in the _map and inserted in the vector of bombs
 	if (*bomberman_front == G_CHAR)
 	{
 		*bomberman_front = B_CHAR;
@@ -235,7 +257,7 @@ void Game::drop_bomb()
 
 void Game::explode_bomb(Bomb& bomb)
 {
-	int i = bomb.y() / BLOCK_SIZE;
+	int i = bomb.y() / BLOCK_SIZE;  //Position on _map analogous to the Bomberman's position
 	int j = bomb.x() / BLOCK_SIZE;
 
 	int upper_radius;
@@ -245,8 +267,13 @@ void Game::explode_bomb(Bomb& bomb)
 
 	bomb.is_exploding() = true;
 
+	//Removes the non-exploded bomb character from the map
 	this->_map[i][j] = G_CHAR;
 
+	//These for-loops find the radius of the explosion by verifying if there are
+	//unbreakable walls (UW_CHAR) in the surroundings of the bomb. If there are
+	//the radius in this certain direction will be smaller since the wall stops
+	//the propagation of the explosion
 	for (upper_radius = 0; upper_radius < MAX_RADIUS; upper_radius++)
 	{
 		if (this->_map[i-upper_radius-1][j] == UW_CHAR)
@@ -268,11 +295,13 @@ void Game::explode_bomb(Bomb& bomb)
 			break;
 	}
 
+	//Stores the radii in the bomb class object
 	bomb.upper_radius() = upper_radius;
 	bomb.bottom_radius() = bottom_radius;
 	bomb.left_radius() = left_radius;
 	bomb.right_radius() = right_radius;
 
+	//Stores the timestamp of the moment in which the bomb exploded;
 	bomb.explosion_time() = time(NULL);
 }
 
@@ -282,8 +311,9 @@ void Game::end_explosion(Bomb& bomb)
 	int i = bomb.y() / BLOCK_SIZE;
 	int j = bomb.x() / BLOCK_SIZE;
 
-	bomb.is_exploding() = false; //This line is probably unecessary
+	bomb.is_exploding() = false; //This line is probably unecessary, but I won't risk it
 
+	//Fills the places in the map affected by the explosion with G_CHAR (the empty ground tile)
 	for (int x = 1; x <= bomb.upper_radius(); x++)
 	{
 		this->_map[i-x][j] = G_CHAR;
@@ -301,8 +331,168 @@ void Game::end_explosion(Bomb& bomb)
 		this->_map[i][j+x] = G_CHAR;
 	}
 
+	//Erase the exploded bomb from the vector of bombs
 	auto it = std::find(this->_bombs.begin(), this->_bombs.end(), bomb); 
 	this->_bombs.erase(it);
+}
+
+
+
+/* Ends the game after defeating all enemies */
+void Game::victory()
+{
+	this->render();
+
+	//Wait 
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+	//Does a clockwise spinning Bomberman animation
+	for (int i = 0; i < 5; i++)
+	{
+		this->_man.last_move() = sf::Keyboard::Down;
+		this->render();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		this->_man.last_move() = sf::Keyboard::Left;
+		this->render();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		this->_man.last_move() = sf::Keyboard::Up;
+		this->render();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+		this->_man.last_move() = sf::Keyboard::Right;
+		this->render();
+		std::this_thread::sleep_for(std::chrono::milliseconds(100));
+	}
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+	this->_window->close();
+}
+
+
+/* Ends the game because the bomberman was killed */
+void Game::game_over()
+{
+	this->_man.is_dead() = true;
+
+	//Shows the dead Bomberman sprite
+	this->render();
+
+	//Waits 2 seconds
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+
+	this->_window->close();
+}
+
+
+/* Checks if the player touched any of the enemies or bombs and, if *
+ * they did, end the game. Also checks if an enemy touched the bomb */
+void Game::death_check()
+{
+	std::vector<Enemy> killed_enemies;
+
+	bool man_touched_enemy;
+	bool man_touched_bomb;
+	bool bomb_touched_enemy;
+
+	//*man_touched_enemy: true if the bomberman's and an enemy's sprite overlaped
+	//*man_touched_bomb: true if the bomberman's and a bomb's sprite overlaped
+	//*bomb_touched_enemy: true if a bomb's and an enemy's sprite overlaped
+
+	for (auto enemy : this->_enemies)
+	{
+		//Variable initialization
+		man_touched_enemy = false;
+
+		//If the bomberman and an enemy share neither of the two axis, there's no possibility
+		//of them touching. If they do share an axis, it checks if the distance between them
+		//in that axis is smaller than a certain limit, killing the bomberman if it is. These
+		//checks are also made for bomb_touched_enemy and man_touched_bomb
+
+		//Checks if bomberman touched an enemy
+		if (this->_man.x() == enemy.x())
+			man_touched_enemy = (abs(this->_man.y() - enemy.y()) < BLOCK_SIZE);		
+		else if (this->_man.y() == enemy.y())
+			man_touched_enemy = (abs(this->_man.x() - enemy.x()) < BLOCK_SIZE);		
+
+		//The game ends if the bomberman collides with an enemy
+		if (man_touched_enemy)
+			this->game_over();
+
+		//Checks every bomb to see if the explosion caught an enemy
+		for (auto bomb : this->_bombs)
+		{
+			//If the bomb isn't exploding, it isn't going to kill anything
+			if (!bomb.is_exploding())
+				continue;
+
+			//Variable initialization
+			bomb_touched_enemy = false;
+
+			if (bomb.x() == enemy.x())
+			{
+				//if the bomb is below the enemy
+				if (bomb.y() > enemy.y())
+					bomb_touched_enemy = (abs(bomb.y() - enemy.y()) < (1+bomb.upper_radius())*BLOCK_SIZE);		
+				else
+					bomb_touched_enemy = (abs(bomb.y() - enemy.y()) < (1+bomb.bottom_radius())*BLOCK_SIZE);
+			}
+			else if (bomb.y() == enemy.y())
+			{
+				//if the bomb is on the enemy's right side
+				if (bomb.x() > enemy.x())
+					bomb_touched_enemy = (abs(bomb.x() - enemy.x()) < (1+bomb.left_radius())*BLOCK_SIZE);		
+				else
+					bomb_touched_enemy = (abs(bomb.x() - enemy.x()) < (1+bomb.right_radius())*BLOCK_SIZE);		
+			}
+
+			//If the explosion caught an enemy, they must be killed later
+			if (bomb_touched_enemy)
+				killed_enemies.push_back(enemy);
+		}
+	}
+
+	//Checks every bomb to see if the explosion caught the bomberman
+	for (auto bomb : this->_bombs)
+	{
+		//Variable initialization
+		man_touched_bomb = false;
+
+		if (!bomb.is_exploding())
+			continue;
+
+		//Here, the limit of distance between the center of the explosion and the bomberman
+		//is determined by the position of the bomberman relative to the bomb and the radius
+		//of explosion in that direction
+
+		if (this->_man.x() == bomb.x())
+		{
+			if (bomb.y() > this->_man.y())
+				man_touched_bomb = (abs(bomb.y() - this->_man.y()) < (1+bomb.upper_radius())*BLOCK_SIZE);		
+			else
+				man_touched_bomb = (abs(bomb.y() - this->_man.y()) < (1+bomb.bottom_radius())*BLOCK_SIZE);
+		}
+		else if (this->_man.y() == bomb.y())
+		{
+			if (bomb.x() > this->_man.x())
+				man_touched_bomb = (abs(bomb.x() - this->_man.x()) < (1+bomb.left_radius())*BLOCK_SIZE);		
+			else
+				man_touched_bomb = (abs(bomb.x() - this->_man.x()) < (1+bomb.right_radius())*BLOCK_SIZE);		
+		}
+
+		//The game ends if the explosion catches the bomberman
+		if (man_touched_bomb)
+			this->game_over();
+	}
+
+	//Goes through the list of enemies that were killed and erase them from the vector of enemies
+	for (auto enemy : killed_enemies)
+	{
+		auto it2 = std::find(this->_enemies.begin(), this->_enemies.end(), enemy);
+		this->_enemies.erase(it2);
+	}
 }
 
 
@@ -313,54 +503,23 @@ void Game::update_events()
 	{
 		switch (this->_event.type)
 		{
-		case sf::Event::Closed:
+		case sf::Event::Closed:  //Closes window if ordered to
 			this->_window->close();
 			break;
-		case sf::Event::KeyPressed:
-			if (this->_event.key.code == sf::Keyboard::Space)
+		case sf::Event::KeyPressed:  //If any key is pressed
+			if (this->_event.key.code == sf::Keyboard::Space) //If it's the Spacebar, drop a bomb
 				this->drop_bomb();
 			else
-				this->command_movement(this->_man, this->_event.key.code);
+				this->command_movement(this->_man, this->_event.key.code); //If it's any other key, try to move the bomberman
+
+			//Debug
+			if (this->_event.key.code == sf::Keyboard::P)
+				this->victory();
 
 			break;
 		default:
 			break;
 		}
-	}
-}
-
-
-/* Ends the game because the bomberman was killed */
-void Game::game_over()
-{
-	this->_man.is_dead() = true;
-
-	this->render();
-
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-
-	this->_window->close();
-}
-
-
-/* Checks if the player touched any of the enemies and, if they did, end the game */
-void Game::death_check()
-{
-	bool they_touched;
-
-	//*they_touched: true if the bomberman's and an enemy's sprite overlaped
-
-	for (auto enemy : this->_enemies)
-	{
-		if (this->_man.x() == enemy.x())
-			they_touched = (abs(this->_man.y() - enemy.y()) < BLOCK_SIZE);		
-		else if (this->_man.y() == enemy.y())
-			they_touched = (abs(this->_man.x() - enemy.x()) < BLOCK_SIZE);		
-		else
-			they_touched = false;
-
-		if (they_touched)
-			this->game_over();
 	}
 }
 
@@ -395,6 +554,10 @@ void Game::update()
 	//the Bomberman touches an enemy, but the enemy mover away from him on his turn,
 	//making it so that the Bomberman doesn't die, even though he should have.
 	this->death_check();
+
+	//Game is won if all enemies are defeated
+	if (this->_enemies.empty())
+		this->victory();
 }
 
 
@@ -410,6 +573,7 @@ void Game::draw_playfield()
 /* Draws all breakable walls */
 void Game::draw_walls()
 {
+	//The location of breakable walls is stored in the _map class object, so the loops iterate through it
 	for (int i = 0; i < FIELD_BLOCK_HEIGHT; i++)
 	{
 		for (int j = 0; j < FIELD_BLOCK_WIDTH; j++)
@@ -498,6 +662,7 @@ void Game::draw_enemies()
 }
 
 
+/* Draws a bomb that is yet to explode */
 void Game::draw_normal_bomb(Bomb bomb)
 {
 	sf::Sprite bomb_sprite;
@@ -510,6 +675,7 @@ void Game::draw_normal_bomb(Bomb bomb)
 }
 
 
+/* Draws the explosion sprites of an exploding bomb */
 void Game::draw_exploding_bomb(Bomb bomb)
 {
 	sf::Sprite bomb_center_sprite;
@@ -521,6 +687,10 @@ void Game::draw_exploding_bomb(Bomb bomb)
 	sf::Sprite bottom_end_sprite;
 	sf::Sprite left_end_sprite;
 	sf::Sprite right_end_sprite;
+
+	// -> bomb_center_sprite: The explosion sprite that replaces the tile where the bomb itself is
+	// -> ////_end_sprite: The explosion sprite located at the tips of the cross that the explosion forms
+	// -> bomb_///_sprite: The explosion sprite located at the middle of the "arms" of the cross formed by the explosion
 
 	bomb_center_sprite.setTexture(this->_spritesheet);
 	bomb_upper_sprite.setTexture(this->_spritesheet);
@@ -600,6 +770,7 @@ void Game::draw_exploding_bomb(Bomb bomb)
 }
 
 
+/* Handles the drawing of bombs and explosions */
 void Game::draw_bombs()
 {
 	for (auto bomb : this->_bombs)

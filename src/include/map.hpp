@@ -13,8 +13,10 @@
 #define M_CHAR 'M'  //Bomberman
 #define E_CHAR 'E'  //Enemy
 
-/* Stores the position of the walls and bombs sprites, and, at the game's initialization, *
- * stores the initial positions of the enemies and of the player                          */
+/* Stores the position of the walls and bombs sprites, and, at the game's initialization,  *
+ * stores the initial positions of the enemies and of the player (though these ones are    *
+ * removed after the Bomberman and Enemy class objects are initialized, since storing them *
+ * continuously in the map would limit the manipulation of the entities' speed)            */
 class Map
 {
 private:

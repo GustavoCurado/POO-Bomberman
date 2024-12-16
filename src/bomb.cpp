@@ -10,12 +10,14 @@ Bomb::Bomb(std::pair<float,float> coords)
 }
 
 
+/* Returns the x-coordinate of the bomb */
 float Bomb::x()
 {
 	return this->_coords.first;
 }
 
 
+/* Returns the x-coordinate of the bomb */
 float Bomb::y()
 {
 	return this->_coords.second;
@@ -43,24 +45,28 @@ bool& Bomb::is_exploding()
 }
 
 
+/* Returns _upper_radius, which is the radius of explosion in the northern direction */
 int& Bomb::upper_radius()
 {
 	return this->_upper_radius;
 }
 
 
+/* Returns _bottom_radius, which is the radius of explosion in the southern direction */
 int& Bomb::bottom_radius()
 {
 	return this->_bottom_radius;
 }
 
 
+/* Returns _left_radius, which is the radius of explosion in the western direction */
 int& Bomb::left_radius()
 {
 	return this->_left_radius;
 }
 
 
+/* Returns _right_radius, which is the radius of explosion in the eastern direction */
 int& Bomb::right_radius()
 {
 	return this->_right_radius;

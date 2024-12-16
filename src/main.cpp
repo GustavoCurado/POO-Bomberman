@@ -6,8 +6,8 @@ int main()
 
 	while (game.is_open())
 	{
-		game.update();
 		game.render();
+		game.update();
 	}
 
 	return 0;

@@ -40,6 +40,7 @@ private:
 	void explode_bomb(Bomb& bomb);
 	void end_explosion(Bomb& bomb);
 	void update_events();
+	void victory();
 	void game_over();
 	void death_check();
 	void draw_playfield();

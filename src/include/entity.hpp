@@ -22,7 +22,7 @@ public:
 	bool is_dying();
 	float speed();
 	int& steps_counter();
-	sf::Keyboard::Key last_move();
+	sf::Keyboard::Key& last_move();
 
 	void set_coordinates(std::pair<float,float> coords);
 	void move_up();

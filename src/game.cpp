@@ -103,7 +103,7 @@ void Game::command_movement(Entity& entity, sf::Keyboard::Key keycode)
 		new_i = (entity.y() - entity.speed()) / BLOCK_SIZE;
 		is_far_enough = (new_i != neighboring_i);
 
-		is_centered = (entity.x() % BLOCK_SIZE == 0);
+		is_centered = ((int)entity.x() % BLOCK_SIZE == 0);
 
 		if (is_centered && (is_empty || is_far_enough))
 			entity.move_up();
@@ -116,7 +116,7 @@ void Game::command_movement(Entity& entity, sf::Keyboard::Key keycode)
 		neighboring_j = entity.x() / BLOCK_SIZE;
 		is_empty = (this->_map[neighboring_i][neighboring_j] == G_CHAR);
 
-		is_centered = (entity.x() % BLOCK_SIZE == 0);
+		is_centered = ((int)entity.x() % BLOCK_SIZE == 0);
 
 		if (is_centered && is_empty)
 			entity.move_down();
@@ -132,7 +132,7 @@ void Game::command_movement(Entity& entity, sf::Keyboard::Key keycode)
 		new_j = (entity.x() - entity.speed()) / BLOCK_SIZE;
 		is_far_enough = (new_j != neighboring_j);
 
-		is_centered = (entity.y() % BLOCK_SIZE == 0);
+		is_centered = ((int)entity.y() % BLOCK_SIZE == 0);
 
 		if (is_centered && (is_empty || is_far_enough))
 			entity.move_left();
@@ -145,7 +145,7 @@ void Game::command_movement(Entity& entity, sf::Keyboard::Key keycode)
 		neighboring_j = (entity.x() + BLOCK_SIZE) / BLOCK_SIZE;
 		is_empty = (this->_map[neighboring_i][neighboring_j] == G_CHAR);
 
-		is_centered = (entity.y() % BLOCK_SIZE == 0);
+		is_centered = ((int)entity.y() % BLOCK_SIZE == 0);
 
 		if (is_centered && is_empty)
 			entity.move_right();
@@ -193,11 +193,48 @@ void Game::random_movement(Enemy& enemy)
 }
 
 
+void Game::drop_bomb()
+{
+	int i = this->_man.y() / BLOCK_SIZE;
+	int j = this->_man.x() / BLOCK_SIZE;
+
+	int bomb_i;
+	int bomb_j;
+
+	switch (this->_man.last_move())
+	{
+	case sf::Keyboard::Up:
+		bomb_i = i-1;
+		bomb_j = j;
+		break;
+	case sf::Keyboard::Down:
+		bomb_i = i+2;
+		bomb_j = j;
+		break;
+	case sf::Keyboard::Left:
+		bomb_i = i;
+		bomb_j = j-1;
+		break;
+	case sf::Keyboard::Right:
+		bomb_i = i;
+		bomb_j = j+2;
+		break;
+	}
+
+	char* bomberman_front = &this->_map[bomb_i][bomb_j]; //Not a NULL-terminated string, only a pointer to a single char
+
+	if (*bomberman_front == G_CHAR)
+	{
+		*bomberman_front = B_CHAR;
+		Bomb bomb(std::pair(bomb_j*BLOCK_SIZE, bomb_i*BLOCK_SIZE));
+		this->_bombs.push_back(bomb);
+	}
+}
+
+
 /* Handles user inputs and commands through the keyboard and mouse */
 void Game::update_events()
 {
-	//Falta botar um if no "case sf::Event::KeyPressed" pra quando implementar a bomba
-	
 	while (this->_window->pollEvent(this->_event))
 	{
 		switch (this->_event.type)
@@ -206,7 +243,11 @@ void Game::update_events()
 			this->_window->close();
 			break;
 		case sf::Event::KeyPressed:
-			this->command_movement(this->_man, this->_event.key.code);
+			if (this->_event.key.code == sf::Keyboard::Space)
+				this->drop_bomb();
+			else
+				this->command_movement(this->_man, this->_event.key.code);
+
 			break;
 		default:
 			break;
@@ -215,6 +256,7 @@ void Game::update_events()
 }
 
 
+/* Ends the game because the bomberman was killed */
 void Game::game_over()
 {
 	this->_man.is_dead() = true;
@@ -370,6 +412,25 @@ void Game::draw_enemies()
 }
 
 
+void Game::draw_bombs()
+{
+	for (auto bomb : this->_bombs)
+	{
+		sf::Sprite bomb_sprite;
+		bomb_sprite.setTexture(this->_spritesheet);
+
+		if (!bomb.is_exploding())
+		{
+			bomb_sprite.setTextureRect(sf::IntRect(0, 3*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+
+			bomb_sprite.setPosition(bomb.x(), bomb.y());
+			this->_window->draw(bomb_sprite);
+		}
+
+	}
+}
+
+
 /* Handles all graphic elements of the game */
 void Game::render()
 {
@@ -379,6 +440,7 @@ void Game::render()
 	this->draw_walls();
 	this->draw_enemies();
 	this->draw_bomberman();
+	this->draw_bombs();
 
 	this->_window->display();
 }

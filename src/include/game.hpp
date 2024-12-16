@@ -8,6 +8,7 @@
 #include "map.hpp"
 #include "bomberman.hpp"
 #include "enemy.hpp"
+#include "bomb.hpp"
 
 #define BLOCK_SIZE 32
 
@@ -35,6 +36,7 @@ private:
 	void init_window(int width, int height);
 	void command_movement(Entity& entity, sf::Keyboard::Key keycode);
 	void random_movement(Enemy& enemy);
+	void drop_bomb();
 	void update_events();
 	void game_over();
 	void death_check();
@@ -42,6 +44,7 @@ private:
 	void draw_walls();
 	void draw_bomberman();
 	void draw_enemies();
+	void draw_bombs();
 
 public:
 	Game();

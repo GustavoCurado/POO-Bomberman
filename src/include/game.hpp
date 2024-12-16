@@ -29,6 +29,7 @@ private:
 	Map _map;
 	Bomberman _man;
 	std::vector<Enemy> _enemies;
+	std::vector<Bomb> _bombs;
 
 	void init_members();
 	void init_window(int width, int height);

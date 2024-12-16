@@ -37,6 +37,8 @@ private:
 	void command_movement(Entity& entity, sf::Keyboard::Key keycode);
 	void random_movement(Enemy& enemy);
 	void drop_bomb();
+	void explode_bomb(Bomb& bomb);
+	void end_explosion(Bomb& bomb);
 	void update_events();
 	void game_over();
 	void death_check();
@@ -44,6 +46,8 @@ private:
 	void draw_walls();
 	void draw_bomberman();
 	void draw_enemies();
+	void draw_normal_bomb(Bomb bomb);
+	void draw_exploding_bomb(Bomb bomb);
 	void draw_bombs();
 
 public:

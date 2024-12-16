@@ -3,6 +3,7 @@
 #include <cmath>
 #include <chrono>
 #include <thread>
+#include <algorithm>
 #include <stdexcept>
 #include "game.hpp"
 
@@ -232,6 +233,79 @@ void Game::drop_bomb()
 }
 
 
+void Game::explode_bomb(Bomb& bomb)
+{
+	int i = bomb.y() / BLOCK_SIZE;
+	int j = bomb.x() / BLOCK_SIZE;
+
+	int upper_radius;
+	int bottom_radius;
+	int left_radius;
+	int right_radius;
+
+	bomb.is_exploding() = true;
+
+	this->_map[i][j] = G_CHAR;
+
+	for (upper_radius = 0; upper_radius < MAX_RADIUS; upper_radius++)
+	{
+		if (this->_map[i-upper_radius-1][j] == UW_CHAR)
+			break;
+	}
+	for (bottom_radius = 0; bottom_radius < MAX_RADIUS; bottom_radius++)
+	{
+		if (this->_map[i+bottom_radius+1][j] == UW_CHAR)
+			break;
+	}
+	for (left_radius = 0; left_radius < MAX_RADIUS; left_radius++)
+	{
+		if (this->_map[i][j-left_radius-1] == UW_CHAR)
+			break;
+	}
+	for (right_radius = 0; right_radius < MAX_RADIUS; right_radius++)
+	{
+		if (this->_map[i][j+right_radius+1] == UW_CHAR)
+			break;
+	}
+
+	bomb.upper_radius() = upper_radius;
+	bomb.bottom_radius() = bottom_radius;
+	bomb.left_radius() = left_radius;
+	bomb.right_radius() = right_radius;
+
+	bomb.explosion_time() = time(NULL);
+}
+
+
+void Game::end_explosion(Bomb& bomb)
+{
+	int i = bomb.y() / BLOCK_SIZE;
+	int j = bomb.x() / BLOCK_SIZE;
+
+	bomb.is_exploding() = false; //This line is probably unecessary
+
+	for (int x = 1; x <= bomb.upper_radius(); x++)
+	{
+		this->_map[i-x][j] = G_CHAR;
+	}
+	for (int x = 1; x <= bomb.bottom_radius(); x++)
+	{
+		this->_map[i+x][j] = G_CHAR;
+	}
+	for (int x = 1; x <= bomb.left_radius(); x++)
+	{
+		this->_map[i][j-x] = G_CHAR;
+	}
+	for (int x = 1; x <= bomb.right_radius(); x++)
+	{
+		this->_map[i][j+x] = G_CHAR;
+	}
+
+	auto it = std::find(this->_bombs.begin(), this->_bombs.end(), bomb); 
+	this->_bombs.erase(it);
+}
+
+
 /* Handles user inputs and commands through the keyboard and mouse */
 void Game::update_events()
 {
@@ -294,6 +368,18 @@ void Game::death_check()
 /* Updates the status and position of entities and objects in the game */
 void Game::update()
 {
+	//If it's been more than SECONDS_UNTIL_EXPLOSION seconds
+	//since the bomb was placed, it'll explode
+	for (Bomb& bomb : this->_bombs)
+	{
+		if (!bomb.is_exploding() && time(NULL) >= bomb.bomb_time() + SECONDS_UNTIL_EXPLOSION)
+			this->explode_bomb(bomb);
+		else if (bomb.is_exploding() && time(NULL) >= bomb.explosion_time() + EXPLOSION_DURATION)
+			this->end_explosion(bomb);
+	}
+
+	this->death_check();
+
 	this->update_events();
 
 	this->death_check();
@@ -304,7 +390,7 @@ void Game::update()
 		this->random_movement(enemy);
 	}
 
-	//There are two death checks because, if we only placed a death check after
+	//There are three death checks because, if we only placed a death check after
 	//both the Bomberman and his enemies moved, it's possible that, at their his
 	//the Bomberman touches an enemy, but the enemy mover away from him on his turn,
 	//making it so that the Bomberman doesn't die, even though he should have.
@@ -412,21 +498,116 @@ void Game::draw_enemies()
 }
 
 
+void Game::draw_normal_bomb(Bomb bomb)
+{
+	sf::Sprite bomb_sprite;
+	bomb_sprite.setTexture(this->_spritesheet);
+
+	bomb_sprite.setTextureRect(sf::IntRect(0, 3*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+
+	bomb_sprite.setPosition(bomb.x(), bomb.y());
+	this->_window->draw(bomb_sprite);
+}
+
+
+void Game::draw_exploding_bomb(Bomb bomb)
+{
+	sf::Sprite bomb_center_sprite;
+	sf::Sprite bomb_upper_sprite;
+	sf::Sprite bomb_bottom_sprite;
+	sf::Sprite bomb_left_sprite;
+	sf::Sprite bomb_right_sprite;
+	sf::Sprite upper_end_sprite;
+	sf::Sprite bottom_end_sprite;
+	sf::Sprite left_end_sprite;
+	sf::Sprite right_end_sprite;
+
+	bomb_center_sprite.setTexture(this->_spritesheet);
+	bomb_upper_sprite.setTexture(this->_spritesheet);
+	bomb_bottom_sprite.setTexture(this->_spritesheet);
+	bomb_left_sprite.setTexture(this->_spritesheet);
+	bomb_right_sprite.setTexture(this->_spritesheet);
+	upper_end_sprite.setTexture(this->_spritesheet);
+	bottom_end_sprite.setTexture(this->_spritesheet);
+	left_end_sprite.setTexture(this->_spritesheet);
+	right_end_sprite.setTexture(this->_spritesheet);
+
+	bomb_center_sprite.setTextureRect(sf::IntRect(7*BLOCK_SIZE, 11*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	bomb_upper_sprite.setTextureRect(sf::IntRect(7*BLOCK_SIZE, 10*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	bomb_bottom_sprite.setTextureRect(sf::IntRect(7*BLOCK_SIZE, 12*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	bomb_left_sprite.setTextureRect(sf::IntRect(8*BLOCK_SIZE, 11*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	bomb_right_sprite.setTextureRect(sf::IntRect(6*BLOCK_SIZE, 11*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	upper_end_sprite.setTextureRect(sf::IntRect(7*BLOCK_SIZE, 9*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	bottom_end_sprite.setTextureRect(sf::IntRect(7*BLOCK_SIZE, 13*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	left_end_sprite.setTextureRect(sf::IntRect(5*BLOCK_SIZE, 11*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+	right_end_sprite.setTextureRect(sf::IntRect(9*BLOCK_SIZE, 11*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
+
+	bomb_center_sprite.setPosition(bomb.x(), bomb.y());
+	this->_window->draw(bomb_center_sprite);
+
+	for (int i = 1; i <= bomb.upper_radius(); i++)
+	{
+		if (i != bomb.upper_radius())
+		{
+			bomb_upper_sprite.setPosition(bomb.x(), bomb.y()-i*BLOCK_SIZE);
+			this->_window->draw(bomb_upper_sprite);
+		}
+		else
+		{
+			upper_end_sprite.setPosition(bomb.x(), bomb.y()-i*BLOCK_SIZE);
+			this->_window->draw(upper_end_sprite);
+		}
+	}
+	for (int i = 1; i <= bomb.bottom_radius(); i++)
+	{
+		if (i != bomb.bottom_radius())
+		{
+			bomb_bottom_sprite.setPosition(bomb.x(), bomb.y()+i*BLOCK_SIZE);
+			this->_window->draw(bomb_bottom_sprite);
+		}
+		else
+		{
+			bottom_end_sprite.setPosition(bomb.x(), bomb.y()+i*BLOCK_SIZE);
+			this->_window->draw(bottom_end_sprite);
+		}
+	}
+	for (int i = 1; i <= bomb.left_radius(); i++)
+	{
+		if (i != bomb.left_radius())
+		{
+			bomb_left_sprite.setPosition(bomb.x()-i*BLOCK_SIZE, bomb.y());
+			this->_window->draw(bomb_left_sprite);
+		}
+		else
+		{
+			left_end_sprite.setPosition(bomb.x()-i*BLOCK_SIZE, bomb.y());
+			this->_window->draw(left_end_sprite);
+		}
+	}
+	for (int i = 1; i <= bomb.right_radius(); i++)
+	{
+		if (i != bomb.right_radius())
+		{
+			bomb_right_sprite.setPosition(bomb.x()+i*BLOCK_SIZE, bomb.y());
+			this->_window->draw(bomb_right_sprite);
+		}
+		else
+		{
+			right_end_sprite.setPosition(bomb.x()+i*BLOCK_SIZE, bomb.y());
+			this->_window->draw(right_end_sprite);
+		}
+	}
+}
+
+
 void Game::draw_bombs()
 {
 	for (auto bomb : this->_bombs)
 	{
-		sf::Sprite bomb_sprite;
-		bomb_sprite.setTexture(this->_spritesheet);
-
 		if (!bomb.is_exploding())
-		{
-			bomb_sprite.setTextureRect(sf::IntRect(0, 3*BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE));
-
-			bomb_sprite.setPosition(bomb.x(), bomb.y());
-			this->_window->draw(bomb_sprite);
-		}
-
+			this->draw_normal_bomb(bomb);
+		else
+			this->draw_exploding_bomb(bomb);
 	}
 }
 
@@ -439,8 +620,8 @@ void Game::render()
 	this->draw_playfield();
 	this->draw_walls();
 	this->draw_enemies();
-	this->draw_bomberman();
 	this->draw_bombs();
+	this->draw_bomberman();
 
 	this->_window->display();
 }
